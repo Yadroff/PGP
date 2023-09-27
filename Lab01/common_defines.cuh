@@ -2,117 +2,105 @@
 
 #include <iostream>
 #include <sstream>
+#include <iomanip>
+#include <vector>
 #include <cassert>
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include <math_functions.h>
 
-#define CALL_CUDA_FUNC(func, ...) \
-	do { \
-		cudaError_t status = func(__VA_ARGS__); \
-		if (status != cudaSuccess) { \
-			StringBuilder builder;\
-			builder.Append("Cuda ERROR at").Append(__FILE__, ", ").Append(__LINE__, "\n")\
-			.Append("Message", ": ").Append(cudaGetErrorString(status), "");\
-			std::cerr << builder.Str() << std::endl;\
-			exit(0); \
-		}\
-	}\
-	while (0)\
+#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__BORLANDC__)
+#define OS_WIN
+#include <windows.h>
+#include <sysinfoapi.h>
+#include <intrin.h>
+#endif
 
-#define ASSERT_MSG(condition, format, ...) \
-	do {\
-		if (!(condition)){\
-			/* Get warning if format is wrong */ \
-			sizeof(sprintf(nullptr, format, __VA_ARGS__)); \
-			StringBuilder report;\
-			report.Append("ASSERT FAIL at").Append(__FILE__, ", ").Append(__LINE__, "\n")\
-			.Append("Condition", ": ").Append(#condition, "\n")\
-			.Append("Description", ": ").AppendFmt(format, __VA_ARGS__); \
-			std::cerr << report.Str() << std::endl; \
-		}\
-	}\
-	while (0)\
-
-#define CUDA_EVENT(name) CudaEventWrapper event_##name
-
-struct StringBuilder {
-public:
-	template<typename T>
-	StringBuilder& Append(const T& arg, const char* delimiter = " ") {
-		buff << arg << delimiter;
-		return *this;
-	}
-	template<typename ...Args>
-	StringBuilder& AppendFmt(const char* fmt, Args... args) {
-		static constexpr size_t maxAppendSize = 100;
-		char str[maxAppendSize] = "";
-		sprintf(str, fmt, args...);
-		return Append(std::string(str));
-	}
-	operator std::string() const {
-		return buff.str();
-	}
-	std::string Str() const {
-		return buff.str();
-	}
-private:
-	std::stringstream buff;
-};
+#define INIT_IO() \
+	std::ios_base::sync_with_stdio(false);	\
+	std::cin.tie(nullptr);					\
+	std::cout.tie(nullptr);					\
+	std::setprecision(10);					
 
 
-struct CudaEventWrapper {
-	CudaEventWrapper() {
-		CALL_CUDA_FUNC(cudaEventCreate, &event);
-	}
-	~CudaEventWrapper() {
-		CALL_CUDA_FUNC(cudaEventDestroy, event);
-	}
-	cudaEvent_t event;
-};
+/// Wrapper to call CUDA functions
+///
+/// Callcs CUDA `func` and chekcs returned error
+#define ERROR_WRAPPER_CALL(func, ...)														\
+	do {																					\
+		cudaError_t status = func(__VA_ARGS__);												\
+		ASSERT_MSG(status == cudaSuccess, "CUDA ERROR: %s", cudaGetErrorString(status));	\
+	}																						\
+	while (0)																				
 
-template<typename T>
-class CudaArray {
-public:
-	CudaArray(std::size_t size): size(size) {
-		CALL_CUDA_FUNC(cudaMalloc, &data, sizeof(T) * size);
-	}
-	void MoveToDevice(T* from, std::size_t n) {
-		ASSERT_MSG(n <= size, "Index out of range: size is %zd, index is %zd", size, n);
-		CALL_CUDA_FUNC(cudaMemcpy, data, from, n * sizeof(T), cudaMemcpyHostToDevice);
-	}
 
-	void MoveToDevice(T* from) {
-		MoveToDevice(from, size);
-	}
+/// Assert with description and file, line information 
+#define ASSERT_MSG(condition, format, ...)														\
+	do {																						\
+		if (!(condition)){																		\
+			/* Get warning if format is wrong */												\
+			(void)sizeof(sprintf(nullptr, format, __VA_ARGS__));								\
+			StringBuilder report;																\
+			report.Append("ASSERT FAIL at").Append(__FILE__, ", ").Append(__LINE__, "\n")		\
+			.Append("Condition", ": ").Append(#condition, "\n")									\
+			.Append("Description", ": ").AppendFmt(format, __VA_ARGS__);						\
+			std::cerr << report.Str() << std::endl;												\
+			osDebugBreak();																		\
+		}																						\
+	}																							\
+	while (0)
 
-	void MoveToHost(T* to, std::size_t n) {
-		ASSERT_MSG(n <= size, "Index out of range: size is %zd, index is %zd", size, n);
-		CALL_CUDA_FUNC(cudaMemcpy, to, data, n * sizeof(T), cudaMemcpyDeviceToHost);
-	}
+#define ASSERT_FALSE(format, ...) ASSERT_MSG(false, format, __VA_ARGS__);
+#define ASSERT_NO_MSG(condition) ASSERT_MSG(condition, "");
 
-	void MoveToHost(T* to) {
-		MoveToHost(to, size);
-	}
-	~CudaArray() {
-		CALL_CUDA_FUNC(cudaFree, data);
-	}
-	T& operator[](std::size_t ind) {
-		ASSERT_MSG(ind <= size, "Index out of range: size is %d, index is %d", size, ind);
-		return data[ind];
-	}
-	T operator[](std::size_t ind) const{
-		ASSERT_MSG(ind <= size, "Index out of range: size is %d, index is %d", size, ind);
-		return data[ind];
-	}
-	std::size_t Size() const {
-		return size;
-	}
-	T* Data() {
-		return data;
-	}
-private:
-	T* data;
-	std::size_t size;
-};
+/// Create and accsess to CUDA Events
+#define CUDA_EVENT_WRAPPER(name) CudaEventWrapper event_##name
+#define CUDA_EVENT(name) event_##name##.event
+
+/// CUDA func call with benchmark if defined
+#ifdef BENCHMARK
+#define CALL_CUDA_FUNC(func, ...)																			\
+	do{																										\
+		float time;																							\
+		CUDA_EVENT_WRAPPER(start);																			\
+		CUDA_EVENT_WRAPPER(stop);																			\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(start));												\
+		ERROR_WRAPPER_CALL(func, __VA_ARGS__);																\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(stop));												\
+		ERROR_WRAPPER_CALL(cudaEventSynchronize, CUDA_EVENT(stop));											\
+		ERROR_WRAPPER_CALL(cudaEventElapsedTime, &time, CUDA_EVENT(start), CUDA_EVENT(stop));				\
+		StringBuilder timeStr;																				\
+		timeStr.AppendFmt("Elapsed time for call %s: %f", #func, time);										\
+		std::cout << timeStr.Str() << std::endl;															\
+	} while (0)
+
+#define CALL_KERNEL(...)																				\
+	do{																										\
+		float time;																							\
+		CUDA_EVENT_WRAPPER(start);																			\
+		CUDA_EVENT_WRAPPER(stop);																			\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(start));												\
+		kernel<<< 1024, 1024 >>>(__VA_ARGS__);																\
+		ERROR_WRAPPER_CALL(cudaDeviceSynchronize);															\
+		ERROR_WRAPPER_CALL(cudaGetLastError);																\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(stop));												\
+		ERROR_WRAPPER_CALL(cudaEventSynchronize, CUDA_EVENT(stop));											\
+		ERROR_WRAPPER_CALL(cudaEventElapsedTime, &time, CUDA_EVENT(start), CUDA_EVENT(stop));				\
+		StringBuilder timeStr;																				\
+		timeStr.AppendFmt("Elapsed time for call %s: %f", "kernel", time);									\
+		std::cout << timeStr.Str() << std::endl;															\
+	} while (0)
+#else
+#define CALL_CUDA_FUNC(func, ...) ERROR_WRAPPER_CALL(func, __VA_ARGS__);
+#define CALL_KERNEL(...)																					\
+	do {																									\
+		kernel<<< 1024, 1024 >>>(__VA_ARGS__);																\
+		ERROR_WRAPPER_CALL(cudaDeviceSynchronize);															\
+		ERROR_WRAPPER_CALL(cudaGetLastError);																\
+	} while(0)
+#endif // TIME_RECORD
+
+void osDebugBreak() {
+	int* pointer = nullptr;
+	*pointer = 1;
+}

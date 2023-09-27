@@ -1,0 +1,4 @@
+FLAGS_NVCC = -g -O2 -std=c++11
+
+solution: kernel.cu common_defines.cuh common_structures.cuh
+	nvcc $(FLAGS_NVCC) kernel.cu -o solution
