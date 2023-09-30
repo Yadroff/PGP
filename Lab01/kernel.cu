@@ -1,7 +1,8 @@
 ﻿#include "common_defines.cuh"
-#include "common_structures.cuh"
+#include "common_structures.hpp"
 
-__global__ void kernel(float* first, float* second, float* result, int n) {
+
+__global__ void kernel(float* first, float* second, OUTPUT<float> result, int n) {
 	int ind = blockIdx.x * blockDim.x + threadIdx.x;
 	int offset = gridDim.x * blockDim.x;
 	while (ind < n) {
@@ -11,10 +12,11 @@ __global__ void kernel(float* first, float* second, float* result, int n) {
 }
 
 
-int main() {
+int main(int argc, const char* argv[]) {
 	INIT_IO();
 #ifdef BENCHMARK
-	DisplayInfo();
+	osDisplayHardwareInfo(std::cout);
+	checkCommandLine(argc, argv);
 #endif
 	int n;
 	std::cin >> n;
@@ -33,9 +35,10 @@ int main() {
 
 	CALL_KERNEL(cuda_first.Data(), cuda_second.Data(), cuda_result.Data(), n);
 	cuda_result.MoveToHost(result.data());
-
+#ifndef BENCHMARK
 	for (auto &component: result) {
 		std::cout << component << " ";
 	}
 	std::cout << std::endl;
+#endif
 }

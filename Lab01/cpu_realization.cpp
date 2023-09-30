@@ -1,33 +1,54 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
+#include <iomanip>
 #include <thread>
-
-#ifdef TIME_RECORD
 #include <chrono>
-#endif
 
-void ThreadFunc(const std::vector<double> &first, const std::vector<double> &second, std::vector<double>& result, std::size_t offset, std::size_t start) {
-	for (std::size_t cur = start; cur < result.size(); cur += offset) {
-		result[cur] = std::min(first[cur], second[cur]);
-	}
+void threadFunc(const std::vector<double> &v1, const std::vector<double> &v2, std::vector<double> &result, size_t start,
+                size_t offset) {
+    while (start < v1.size()) {
+        result[start] = std::min(v1[start], v2[start]);
+        start += offset;
+    }
 }
 
-void CPU_Realization(const std::vector<double>& first, const std::vector<double>& second, std::vector<double>& result) {
-	std::size_t threadCount = std::min(static_cast<std::size_t>(1000), first.size());
-	std::vector<std::thread> threads;
-#ifdef TIME_RECORD
-	auto start = std::chrono::system_clock::now();
+int main() {
+    std::ios_base::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    std::cout.tie(nullptr);
+    std::setprecision(10);
+    int n;
+    std::cin >> n;
+    std::vector<double> first(n), second(n), result(n, 0.0);
+    for (int i = 0; i < n; ++i) {
+        std::cin >> first[i];
+    }
+    for (int i = 0; i < n; ++i) {
+        std::cin >> second[i];
+    }
+#ifdef BENCHMARK
+    auto start = std::chrono::system_clock::now();
 #endif
-	for (std::size_t i = 0; i < threadCount; ++i) {
-		threads.emplace_back(ThreadFunc, first, second, result, threadCount, i);
-	}
-	for (auto& thread : threads) {
-		thread.join();
-	}
-#ifdef TIME_RECORD
-
+    std::vector<std::thread> threads;
+    int threadsNum = std::min(n, 1000);
+    threads.reserve(threadsNum);
+    for (int i = 0; i < threadsNum; ++i) {
+        threads.emplace_back(threadFunc, std::ref(first), std::ref(second), std::ref(result), i, threadsNum);
+    }
+    for (int i = 0; i < threadsNum; ++i) {
+        threads[i].join();
+    }
+#ifdef BENCHMARK
+    auto end = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration<double>(end - start);
+    std::cout << "Elapsed time for call kernel: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << " ms" << std::endl;
 #endif
-	for (auto val : result) {
-		std::cout << val << " " << std::endl;
-	}
+#ifndef BENCHMARK
+    for (auto val: result) {
+        std::cout << val << " ";
+    }
+    std::cout << std::endl;
+#endif
 }

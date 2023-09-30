@@ -9,11 +9,10 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__BORLANDC__)
-#define OS_WIN
-#include <windows.h>
-#include <sysinfoapi.h>
-#include <intrin.h>
+#include "os.cuh"
+
+#ifdef _DEBUG
+#define BENCHMARK
 #endif
 
 #define INIT_IO() \
@@ -59,6 +58,11 @@
 
 /// CUDA func call with benchmark if defined
 #ifdef BENCHMARK
+extern int BLOCKS_NUM;
+extern int THREADS_IN_BLOCK;
+
+void checkCommandLine(int argc, const char** argv);
+
 #define CALL_CUDA_FUNC(func, ...)																			\
 	do{																										\
 		float time;																							\
@@ -74,21 +78,24 @@
 		std::cout << timeStr.Str() << std::endl;															\
 	} while (0)
 
-#define CALL_KERNEL(...)																				\
-	do{																										\
-		float time;																							\
-		CUDA_EVENT_WRAPPER(start);																			\
-		CUDA_EVENT_WRAPPER(stop);																			\
-		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(start));												\
-		kernel<<< 1024, 1024 >>>(__VA_ARGS__);																\
-		ERROR_WRAPPER_CALL(cudaDeviceSynchronize);															\
-		ERROR_WRAPPER_CALL(cudaGetLastError);																\
-		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(stop));												\
-		ERROR_WRAPPER_CALL(cudaEventSynchronize, CUDA_EVENT(stop));											\
-		ERROR_WRAPPER_CALL(cudaEventElapsedTime, &time, CUDA_EVENT(start), CUDA_EVENT(stop));				\
-		StringBuilder timeStr;																				\
-		timeStr.AppendFmt("Elapsed time for call %s: %f", "kernel", time);									\
-		std::cout << timeStr.Str() << std::endl;															\
+#define CALL_KERNEL(...)																						\
+	do{																											\
+		float time;																								\
+		StringBuilder builder;																					\
+		builder.AppendFmt("CUDA Kernel function parameters: <<< %d, %d >>>", BLOCKS_NUM, THREADS_IN_BLOCK);		\
+		std::cout << builder.Str() << std::endl;																\
+		CUDA_EVENT_WRAPPER(start);																				\
+		CUDA_EVENT_WRAPPER(stop);																				\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(start));													\
+		kernel<<< BLOCKS_NUM, THREADS_IN_BLOCK >>>(__VA_ARGS__);												\
+		ERROR_WRAPPER_CALL(cudaDeviceSynchronize);																\
+		ERROR_WRAPPER_CALL(cudaGetLastError);																	\
+		ERROR_WRAPPER_CALL(cudaEventRecord, CUDA_EVENT(stop));													\
+		ERROR_WRAPPER_CALL(cudaEventSynchronize, CUDA_EVENT(stop));												\
+		ERROR_WRAPPER_CALL(cudaEventElapsedTime, &time, CUDA_EVENT(start), CUDA_EVENT(stop));					\
+		StringBuilder timeStr;																					\
+		timeStr.AppendFmt("Elapsed time for call %s: %f ms", "kernel", time);									\
+		std::cout << timeStr.Str() << std::endl;																\
 	} while (0)
 #else
 #define CALL_CUDA_FUNC(func, ...) ERROR_WRAPPER_CALL(func, __VA_ARGS__);
@@ -100,7 +107,5 @@
 	} while(0)
 #endif // TIME_RECORD
 
-void osDebugBreak() {
-	int* pointer = nullptr;
-	*pointer = 1;
-}
+template<typename T>
+using OUTPUT = T*;

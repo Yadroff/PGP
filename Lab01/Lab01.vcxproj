@@ -56,7 +56,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <AdditionalOptions>-DBENCHMARK %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-DXUY %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -79,11 +79,14 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="common_defines.cu" />
     <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="os.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common_defines.cuh" />
-    <ClInclude Include="common_structures.cuh" />
+    <ClInclude Include="common_structures.hpp" />
+    <ClInclude Include="os.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
