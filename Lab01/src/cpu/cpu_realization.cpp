@@ -13,7 +13,7 @@ void threadFunc(const std::vector<double> &v1, const std::vector<double> &v2, st
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
     std::cout.tie(nullptr);
@@ -27,12 +27,12 @@ int main() {
     for (int i = 0; i < n; ++i) {
         std::cin >> second[i];
     }
-#ifdef BENCHMARK
-    auto start = std::chrono::system_clock::now();
-#endif
     std::vector<std::thread> threads;
     int threadsNum = std::min(n, 1000);
     threads.reserve(threadsNum);
+#ifdef BENCHMARK
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
     for (int i = 0; i < threadsNum; ++i) {
         threads.emplace_back(threadFunc, std::ref(first), std::ref(second), std::ref(result), i, threadsNum);
     }
@@ -40,7 +40,7 @@ int main() {
         threads[i].join();
     }
 #ifdef BENCHMARK
-    auto end = std::chrono::system_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(end - start);
     std::cout << "Elapsed time for call kernel: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << " ms" << std::endl;

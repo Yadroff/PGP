@@ -7,14 +7,15 @@ Usage:
 Options:
   -h --help                     Show this screen.
   --build -B                    Disable build .sln
-  --solution=SLN -S SLN         Path to directory with .sln [default: ..\\]
+  --solution=SLN -S SLN         Path to directory with .sln [default: ..\\gpu\\Lab01.sln]
   --tests -T                    Disable generate tests
   --check -C                    Check tests
   --benchmark                   Disable benchmark .sln
-  --cpu_exe=EXE                 Path to cpu realization .exe [default: ..\\cpu_realization.exe]
-  --benchmarked_cpu=EXE         Path to cpu realization with benchmark [default: ..\\benchmarked_cpu_realization.exe]
+  --cpu_exe=EXE                 Path to cpu realization .exe [default: ..\\cpu\\cmake-build-release\\cpu_realization.exe]
+  --benchmarked_cpu=EXE         Path to cpu realization with benchmark [default: ..\\cpu\\cmake-build-release\\benchmarked_cpu_realization.exe]
 
 """
+import os.path
 
 from docopt import docopt
 import logging
@@ -36,17 +37,17 @@ _logger.addHandler(_handler)
 
 def main(opts):
     release_exe = None
-    debug_exe = None
+    profile_exe = None
 
     benchmark = not opts['--benchmark']
-    benchmark_cpu_path = opts['--benchmarked_cpu']
-    cpu_exe_path = opts['--cpu_exe']
+    benchmark_cpu_path = os.path.abspath(opts['--benchmarked_cpu'])
+    cpu_exe_path = os.path.abspath(opts['--cpu_exe'])
     build = not opts['--build']
     check = opts['--check']
-    tests = opts['--test']
-    solution_path = opts['--solution']
-    tests_dir = '..\\tests'
-    build_dir = '..\\build'
+    tests = opts['--tests']
+    solution_path = os.path.abspath(opts['--solution'])
+    tests_dir = os.path.abspath('.\\tests')
+    build_dir = os.path.abspath('.\\build')
 
     build = build or check or benchmark
     tests = tests or check or benchmark
@@ -61,19 +62,31 @@ def main(opts):
     _logger.info(' * Check tests: %s', check)
 
     if build:
-        debug_exe = builder.build(solution_path, 'Debug', build_dir)
+        _logger.info('Make build start')
+        profile_exe = builder.build(solution_path, 'Profile', build_dir)
+        _logger.debug('Profile exe path: %s', profile_exe)
         release_exe = builder.build(solution_path, 'Release', build_dir)
+        _logger.debug('Release exe path: %s', release_exe)
+        _logger.info('Make build finish')
 
     if tests:
+        _logger.info('Generate tests start')
         test_generator.generate_tests(tests_dir)
         test_generator.generate_answers(cpu_exe_path, tests_dir)
+        _logger.info('Generate tests finish')
 
     if check:
+        _logger.info('Checker start')
         checker.check(release_exe, tests_dir)
+        _logger.info('Cheker finish')
 
     if benchmark:
-        bench.benchmark(debug_exe, tests_dir)
+        _logger.info('Benchmark start')
+        bench.benchmark(profile_exe, tests_dir)
         bench.benchmark(benchmark_cpu_path, tests_dir, True)
+        _logger.info('Benchmark finish')
+
+    _logger.info('All done!')
 
 
 if __name__ == '__main__':

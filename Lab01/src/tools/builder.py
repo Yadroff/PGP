@@ -54,11 +54,12 @@ def build(solution, configuration, build_path):
         exe_path = _get_ms_build_path()
         command = f'"{exe_path}" "{solution}" {args}'
         _logger.debug('Try to execute: %s', command)
-        subprocess.run(command, stdout=out, text=True, check=True)
+        subprocess.call(command, stdout=out, text=True)
         _logger.debug(out.encoding)
-    return os.path.splitext(os.path.basename(solution))[0] + '.exe'
+    exe_path = os.path.join(build_path, configuration, os.path.splitext(os.path.basename(solution))[0] + '.exe')
+    return os.path.abspath(exe_path)
 
 
 if __name__ == '__main__':
-    build('..\\Lab01.sln', 'Release', '.\\build')
-    build('..\\Lab01.sln', 'Debug', '.\\build')
+    build('..\\gpu\\Lab01.sln', 'Release', '.\\build')
+    build('..\\gpu\\Lab01.sln', 'Profile', '.\\build')

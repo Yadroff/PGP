@@ -1,0 +1,5 @@
+C:/Users/temay/source/repos/PGP/Lab01/src/cpu/cmake-build-release/CMakeFiles/cpu_realization.dir
+C:/Users/temay/source/repos/PGP/Lab01/src/cpu/cmake-build-release/CMakeFiles/benchmarked_cpu_realization.dir
+C:/Users/temay/source/repos/PGP/Lab01/src/cpu/cmake-build-release/CMakeFiles/test.dir
+C:/Users/temay/source/repos/PGP/Lab01/src/cpu/cmake-build-release/CMakeFiles/edit_cache.dir
+C:/Users/temay/source/repos/PGP/Lab01/src/cpu/cmake-build-release/CMakeFiles/rebuild_cache.dir

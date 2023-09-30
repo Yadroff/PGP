@@ -11,7 +11,7 @@
 
 #include "os.cuh"
 
-#ifdef _DEBUG
+#ifdef _PROFILE
 #define BENCHMARK
 #endif
 

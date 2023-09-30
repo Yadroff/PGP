@@ -30,8 +30,9 @@ def generate_test(n, file_name):
 def generate_tests(tests_dir):
     tests_dir = os.path.abspath(tests_dir)
     os.makedirs(tests_dir, exist_ok=True)
-    inputs = [10, 1000, 10_000, 100_000, 1_000_000]
+    inputs = [10_000, 100_000, 1_000_000]
     for i in range(0, len(inputs)):
+        _logger.info('Generate test with n=%d', inputs[i])
         generate_test(inputs[i], os.path.join(tests_dir, f'{i}.in'))
 
 
@@ -52,4 +53,4 @@ def generate_answers(exe_path, tests_dir):
 
 if __name__ == '__main__':
     generate_tests('.\\tests')
-    generate_answers('..\\cpu_realization.exe', '.\\tests')
+    # generate_answers('..\\cpu_realization.exe', '.\\tests')
