@@ -240,7 +240,8 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 
 # Tool dirs
-.tests/*
+.idea\
+tests/*
 ./benchmark_*
 ./benchmark/
 *.txt
