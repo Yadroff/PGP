@@ -1,11 +1,11 @@
 """
 Usage:
-    gif_conv.py [--help] [--version] [--input-dir=<dir>] [--output=<path>]
+    gif_conv.py [--help] [--version] [--input=<dir>] [--output=<path>]
 
 Options:
     --help                   Show this screen.
     --version                Show version.
-    --input-dir=<dir>        Input directory containing .ppm files.
+    --input=<dir>            Input directory containing .ppm files.
     --output=<path>          Output path for converted .gif file.
 """
 from PIL import Image
@@ -31,11 +31,11 @@ def converter(input_dir, output_path):
             frames.append(frame)
     if len(frames) == 0:
         return
-    frames[0].save(os.path.abspath(output_path), save_all=True, append_images=frames[1:], optimize=True, duration=100, loop=0)
+    frames[0].save(os.path.abspath(output_path), save_all=True, append_images=frames[1:], optimize=True, duration=75, loop=0)
 
 
 def main(opts):
-    input_dir = opts['--input-dir']
+    input_dir = opts['--input']
     output_path = opts['--output']
     _logger.info('Input directory: %s', os.path.abspath(input_dir))
     _logger.info('Output GIF path: %s', os.path.abspath(output_path))

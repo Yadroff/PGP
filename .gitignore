@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+tools/CP/.idea/inspectionProfiles/profiles_settings.xml
+tools/CP/.idea/vcs.xml
+tools/CP/.idea/modules.xml
+tools/CP/.idea/misc.xml
+tools/CP/.idea/CP.iml
